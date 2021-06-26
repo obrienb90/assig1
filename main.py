@@ -51,6 +51,27 @@ def initialWrite():
             data={'id':id, 'user_name':user_name, 'password':password}
             db.collection('default').document().set(data)
 
+# function to validate id and password
+def validate(id, pw):
+    
+    # check if id is contained in db
+    docs = db.collection('default').get()
+    found = False
+    for doc in docs:
+        if doc.to_dict()['id']==id:
+            found = True
+            correctPassword = doc.to_dict()['password']
+            break
+    if not found:
+        return False
+    # check the password
+    if correctPassword == pw:
+        return True
+    else:
+        return False
+
+            
+
 # home page
 @app.route("/")
 def home():
@@ -65,16 +86,17 @@ def home():
 def login():
 
     if request.method == "POST":
-        session.permanent = True
-        user = request.form["nm"]
-        age = request.form["age"]
-        city = request.form["city"]
-        session["user"] = user
-        session["age"] = age
-        session["city"] = city
+        userId = request.form["user-id"]
+        pw = request.form["pw"]
+        session["user-id"] = userId
+        session["pw"] = pw
+
+        # validate login details
+        # if validate(user-id, pw):
         return redirect(url_for("user"))
+        
     else:
-        if "user" in session:
+        if "user-id" in session:
             return redirect(url_for("user"))
 
         return render_template("login.html")
@@ -82,18 +104,17 @@ def login():
 # user page
 @app.route("/user/")
 def user():
-    if "user" in session:
-        user = session["user"]
-        age = session["age"]
-        city = session["city"]
-        return f"<p>User name: {user}</p><p>User age: {age}</p><p>User city: {city}</p>"
+    if "user-id" in session:
+        userId = session["user-id"]
+        return f"<p>User ID: {userId} is logged in</p>"
     else:
         return redirect(url_for("login"))
 
 # user page
 @app.route("/logout/")
 def logout():
-    session.pop("user", None)
+    session.pop("user-id", None)
+    session.pop("pw", None)
     return redirect(url_for("login"))
 
 if __name__ == "__main__":

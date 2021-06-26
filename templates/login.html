@@ -2,14 +2,13 @@
 {% block title %}Login {% endblock %}
 
 {%block content %}
+<p>Please enter your ID and password to login</p>
+<p>If you don't already have an account use the register link to get started</p>
 <form action="#" method="post">
-    <p>Name: </p>
-    <p><input type="text" name="nm" /></p>
-    <p>Age: </p>
-    <p><input type="text" name="age" /></p>
-    <p>City: </p>
-    <p><input type="text" name="city" /></p>
-
-    <p><input type="submit" value="submit" /></p>
+    <p>ID: </p>
+    <p><input type="text" name="user-id" /></p>
+    <p>Password: </p>
+    <p><input type="text" name="pw" /></p>
+    <p><input type="submit" value="Login" /></p>
 </form>
 {% endblock %}
