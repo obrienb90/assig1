@@ -9,6 +9,12 @@
     <p><input type="text" name="user-id" /></p>
     <p>Password: </p>
     <p><input type="text" name="pw" /></p>
-    <p><input type="submit" value="Login" /></p>
+    <!--contains login button and block for login error message-->
+    <p>
+        <input type="submit" value="Login" />
+        {% if session["val-status"] == "fail" %}
+            <p>ID or password is invalid</p>
+        {% endif %}
+    </p>
 </form>
 {% endblock %}

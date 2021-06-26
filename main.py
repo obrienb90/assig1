@@ -92,11 +92,21 @@ def login():
         session["pw"] = pw
 
         # validate login details
-        # if validate(user-id, pw):
-        return redirect(url_for("user"))
+        if validate(userId, pw):
+            session["logged-in-user"] = userId
+            session.pop("user-id", None)
+            session.pop("pw", None)
+            return redirect(url_for("user"))
+        # if username or password is invalid set the sesssion variable validated to fail
+        else:
+            session["val-status"] = "fail"
+            session.pop("user-id", None)
+            session.pop("pw", None)
+            return render_template("login.html")
+            
         
     else:
-        if "user-id" in session:
+        if "logged-in-user" in session:
             return redirect(url_for("user"))
 
         return render_template("login.html")
@@ -104,8 +114,8 @@ def login():
 # user page
 @app.route("/user/")
 def user():
-    if "user-id" in session:
-        userId = session["user-id"]
+    if "logged-in-user" in session:
+        userId = session["logged-in-user"]
         return f"<p>User ID: {userId} is logged in</p>"
     else:
         return redirect(url_for("login"))
@@ -113,8 +123,8 @@ def user():
 # user page
 @app.route("/logout/")
 def logout():
-    session.pop("user-id", None)
-    session.pop("pw", None)
+    session.pop("logged-in-user", None)
+    session.pop("val-status", None)
     return redirect(url_for("login"))
 
 if __name__ == "__main__":
