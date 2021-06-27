@@ -70,7 +70,30 @@ def validate(id, pw):
     else:
         return False
 
-            
+# function to determine if id exists
+def idExists(id):
+    found = False
+    docs = db.collection('default').get()
+    for doc in docs:
+        if doc.to_dict()['id']==id:
+            found = True
+            break
+    return found
+
+# function to determine if username exists
+def usernameExists(username):
+    found = False
+    docs = db.collection('default').get()
+    for doc in docs:
+        if doc.to_dict()['user_name'] == username:
+            found = True
+            break
+    return found     
+
+# function to create a new user in the firestore db
+def newUser(id, username, pw):
+    data = {'id':id, 'user_name':username, 'password':pw}
+    db.collection('default').add(data)       
 
 # home page
 @app.route("/")
@@ -96,7 +119,7 @@ def login():
             session["logged-in-user"] = userId
             session.pop("user-id", None)
             session.pop("pw", None)
-            return redirect(url_for("user"))
+            return redirect(url_for("forum"))
         # if username or password is invalid set the sesssion variable validated to fail
         else:
             session["val-status"] = "fail"
@@ -107,24 +130,82 @@ def login():
         
     else:
         if "logged-in-user" in session:
-            return redirect(url_for("user"))
+            return redirect(url_for("forum"))
 
-        return render_template("login.html")
+        if "new_reg" in request.args:
+            new_reg = request.args["new_reg"]
+        else:
+            new_reg = False
 
-# user page
-@app.route("/user/")
-def user():
+        return render_template("login.html", reg_status=new_reg)
+
+# forum page
+@app.route("/forum/")
+def forum():
     if "logged-in-user" in session:
         userId = session["logged-in-user"]
-        return f"<p>User ID: {userId} is logged in</p>"
+        return f"<h1>Welcome to the Forum page</h1><p>User ID: {userId} is logged in</p>"
     else:
         return redirect(url_for("login"))
 
-# user page
+# register page
+@app.route("/register/", methods=["POST", "GET"])
+def register():
+    
+    # pop any session values which may be present from previous attepmts
+    session.pop("reg-id-status", None)
+    session.pop("reg-username-status", None)
+    session.pop("reg-password-status", None)
+    
+    # logic upon form completion
+    # update variables from form
+    if request.method == "POST":
+        regID = request.form["reg-ID"]
+        regUsername = request.form["reg-username"]
+        regPw = request.form["reg-pw"]
+
+
+        # check if id or username is blank or already exists in firestore db
+        failure = False
+
+        if len(regID) == 0:
+            session["reg-id-status"] = "blank"
+            failure = True
+        elif idExists(regID):
+            session["reg-id-status"] = "found"
+            failure = True
+        if len(regUsername) == 0:
+            session["reg-username-status"] = "blank"
+            failure = True
+        elif usernameExists(regUsername):
+            session["reg-username-status"] = "found"
+            failure = True
+
+        # check that password is not blank
+        if len(regPw) == 0:
+            session["reg-password-status"] = "blank"
+            failure = True
+        
+        # check if form validation successful
+        # return to register page if validation failed, proceed to login page if successful
+        if(failure):
+            session.pop("regId", None)
+            session.pop("regUsername", None)
+            session.pop("regPw", None)
+            render_template("register.html")
+        else:
+            newUser(regID, regUsername, regPw)
+            session.pop("regId", None)
+            session.pop("regUsername", None)
+            session.pop("regPw", None)
+            return redirect(url_for("login", new_reg=True))
+
+    return render_template("register.html")
+
+# logout page
 @app.route("/logout/")
 def logout():
-    session.pop("logged-in-user", None)
-    session.pop("val-status", None)
+    session.clear()
     return redirect(url_for("login"))
 
 if __name__ == "__main__":

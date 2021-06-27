@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Registration Page{% endblock %}
+{% block content %}
+
+<h1>Registration page</h1>
+<p>Enter your details below to register an account</p>
+<!-- registration form-->
+<form action="#" method = "post">
+    <p>ID</p>
+    <!--display error message if form validation finds that ID already exists or is blank-->
+    {% if session["reg-id-status"] == "found" %}
+        <p style="color:red;">The ID already exists</p>
+    {% elif session["reg-id-status"] == "blank" %}
+        <p style="color:red;">ID is a required field</p>
+    {% endif %}
+    <p><input type="text" name="reg-ID" /></p>
+    <p>Username</p>
+    <!--display error message if form validation finds that username already exists or is blank-->
+    {% if session["reg-username-status"] == "found" %}
+        <p style="color:red;">The username already exists</p>
+    {% elif session["reg-username-status"] == "blank" %}
+        <p style="color:red;">Username is a required field</p>
+    {% endif %}
+    <p><input type="text" name="reg-username" /></p>
+    <p>Password</p>
+    <!--display error message if form validation finds that password is blank-->
+    {% if session["reg-password-status"] == "blank" %}
+        <p style="color:red;">Password is a required field</p>
+    {% endif %}
+    <p><input type="text" name="reg-pw" /></p>
+    <p>
+        User Image: 
+        <input type="file" name="reg-Image" accept="image/*" />
+    </p>
+    <p></p>
+    <p><input type="submit" value="Register" /></p>
+</form>
+{% endblock %}

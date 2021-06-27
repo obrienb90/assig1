@@ -2,6 +2,10 @@
 {% block title %}Login {% endblock %}
 
 {%block content %}
+<h1>Login</h1>
+{% if reg_status == "True" %}
+    <p style="color:forestgreen;">Registration successful, you can now login</p>
+{% endif %}
 <p>Please enter your ID and password to login</p>
 <p>If you don't already have an account use the register link to get started</p>
 <form action="#" method="post">
@@ -13,8 +17,9 @@
     <p>
         <input type="submit" value="Login" />
         {% if session["val-status"] == "fail" %}
-            <p>ID or password is invalid</p>
+            <p style="color:red;">ID or password is invalid</p>
         {% endif %}
     </p>
 </form>
+<a href="/register">Register</a>
 {% endblock %}
