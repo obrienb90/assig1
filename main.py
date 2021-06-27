@@ -1,16 +1,31 @@
+# -------------------------------------------------------------------------------------------
+# CONFIGURATION
+# -------------------------------------------------------------------------------------------
+
+# imports 
 from flask import Flask, redirect, url_for, render_template, request, session
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+import os
+from google.cloud import storage
 
 # setup firestore credentials using service key
 cred = credentials.Certificate("service_key.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+# google cloud storage settings
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "service_key.json"
+storage_client = storage.Client()
+
 # establish flask settings
 app = Flask(__name__)
 app.secret_key = "zaq12wsx"
+
+# -------------------------------------------------------------------------------------------
+# FUNCTIONS
+# -------------------------------------------------------------------------------------------
 
 # function to determine if a firestore query is empty
 def queryIsEmpty(query):
@@ -94,6 +109,16 @@ def usernameExists(username):
 def newUser(id, username, pw):
     data = {'id':id, 'user_name':username, 'password':pw}
     db.collection('default').add(data)       
+
+# function to upload a file to Google Cloud Storage
+def uploadToCloud(file):
+    bucket = storage_client.get_bucket('s3298931-a1-numbers')
+    blob = bucket.blob(file.filename)
+    blob.upload_from_file(file)
+
+# -------------------------------------------------------------------------------------------
+# FLASK FUNCTIONALITY 
+# -------------------------------------------------------------------------------------------
 
 # home page
 @app.route("/")
@@ -195,6 +220,8 @@ def register():
             render_template("register.html")
         else:
             newUser(regID, regUsername, regPw)
+            image = request.files["reg-Image"]
+            uploadToCloud(image)
             session.pop("regId", None)
             session.pop("regUsername", None)
             session.pop("regPw", None)
