@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Forum Page{% endblock %}
+{% block content %}
+<h1>Forum</h1>
+<div id="user-area">
+    <a href="\user">{{session["user-name"]}}</a>
+    <img src="{{session["image"]}}" alt="user_image" style="width:120px;height:120px">
+</div>
+{% endblock %}

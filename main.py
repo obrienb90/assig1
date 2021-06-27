@@ -59,12 +59,21 @@ def initialWrite():
         id = studentID + str(x)
         user_name = name + str(x)
         password = generatePassword(x)
+        image_name = str(x) + ".png"
 
         # update the database if it doesn't already exist
         docs = db.collection('default').where('id', '==', id).get()
         if queryIsEmpty(docs):
-            data={'id':id, 'user_name':user_name, 'password':password}
+            data={'id':id, 'user_name':user_name, 'password':password, 'image_name':image_name}
             db.collection('default').document().set(data)
+
+# function which takes id and returns username
+def getUsername(id):
+    docs = db.collection('default').get()
+    for doc in docs:
+        if doc.to_dict()['id']==id:
+            return doc.to_dict()['user_name']
+            break
 
 # function to validate id and password
 def validate(id, pw):
@@ -106,8 +115,8 @@ def usernameExists(username):
     return found     
 
 # function to create a new user in the firestore db
-def newUser(id, username, pw):
-    data = {'id':id, 'user_name':username, 'password':pw}
+def newUser(id, username, pw, image_name):
+    data = {'id':id, 'user_name':username, 'password':pw, 'image_name':image_name}
     db.collection('default').add(data)       
 
 # function to upload a file to Google Cloud Storage
@@ -115,6 +124,16 @@ def uploadToCloud(file):
     bucket = storage_client.get_bucket('s3298931-a1-numbers')
     blob = bucket.blob(file.filename)
     blob.upload_from_file(file)
+
+# function to return a users image
+def getImage(id):
+    docs = db.collection('default').get()
+    for doc in docs:
+        if doc.to_dict()['id']==id:
+            image_name = doc.to_dict()['image_name']
+    bucket_name = 's3298931-a1-numbers'
+    image_path = 'https://storage.cloud.google.com/' + bucket_name + '/' + image_name
+    return image_path
 
 # -------------------------------------------------------------------------------------------
 # FLASK FUNCTIONALITY 
@@ -142,6 +161,8 @@ def login():
         # validate login details
         if validate(userId, pw):
             session["logged-in-user"] = userId
+            session["user-name"]=getUsername(userId)
+            session["image"] = getImage(userId)
             session.pop("user-id", None)
             session.pop("pw", None)
             return redirect(url_for("forum"))
@@ -168,8 +189,15 @@ def login():
 @app.route("/forum/")
 def forum():
     if "logged-in-user" in session:
-        userId = session["logged-in-user"]
-        return f"<h1>Welcome to the Forum page</h1><p>User ID: {userId} is logged in</p>"
+        return render_template("forum.html")
+    else:
+        return redirect(url_for("login"))
+
+# user page
+@app.route("/user/")
+def user():
+    if "logged-in-user" in session:
+        return render_template("user.html")
     else:
         return redirect(url_for("login"))
 
@@ -219,9 +247,9 @@ def register():
             session.pop("regPw", None)
             render_template("register.html")
         else:
-            newUser(regID, regUsername, regPw)
             image = request.files["reg-Image"]
             uploadToCloud(image)
+            newUser(regID, regUsername, regPw, image.filename)
             session.pop("regId", None)
             session.pop("regUsername", None)
             session.pop("regPw", None)
