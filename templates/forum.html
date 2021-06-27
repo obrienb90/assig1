@@ -2,8 +2,48 @@
 {% block title %}Forum Page{% endblock %}
 {% block content %}
 <h1>Forum</h1>
-<div id="user-area">
+<!-- user area -->
+<div style="border-style:solid; padding:15px">
+    <p>User area</p>
     <a href="\user">{{session["user-name"]}}</a>
-    <img src="{{session["image"]}}" alt="user_image" style="width:120px;height:120px">
+    <img src="{{session['image']}}" alt="user_image" style="width:120px;height:120px">
+    <br/>
+    <a href="\logout">Click here to Logout</a>
+</div>
+<!-- message posting area -->
+<div style="border-style:solid; padding:15px">
+    <form action="#" enctype="multipart/form-data" method = "post">
+        <p>Message subject</p>
+        <p><input type="text" name="msg-subject" required /></p>
+        <p>Message text</p>
+        <p><textarea name="msg-text" rows="10" cols="50"></textarea></p>
+        <p>
+            Image: 
+            <input type="file" name="msg-image" accept="image/*" />
+        </p>
+        <p><input type="submit" value="Submit" /></p>
+    </form>
+</div>
+<!-- message display area -->
+<div style="border-style:solid; padding:15px">
+    <p>10 latest messages</p>
+    <ul>
+        {% for doc in message_data %}
+            <li>
+                <p>Posted Time: {{doc.to_dict()['date_time']}}</p>
+                <p>Subject: {{doc.to_dict()['subject']}}</p> 
+                <p>Message Text: {{doc.to_dict()['text']}}</p> 
+                <p>
+                    Message Image:
+                    {% if doc.to_dict()['image_url'] != None %}
+                    <img src="{{doc.to_dict()['image_url']}}" alt="message_image" style="width:120px;height:120px">
+                    {% endif %} 
+                    User: {{doc.to_dict()['user_name']}}
+                    User Image: 
+                    <img src="{{doc.to_dict()['user_image_url']}}" alt="user_image" style="width:120px;height:120px">
+                </p>
+            </li>
+        {% endfor %}   
+    </ul>
 </div>
 {% endblock %}

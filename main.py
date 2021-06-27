@@ -9,6 +9,7 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 import os
 from google.cloud import storage
+from datetime import datetime
 
 # setup firestore credentials using service key
 cred = credentials.Certificate("service_key.json")
@@ -120,10 +121,19 @@ def newUser(id, username, pw, image_name):
     db.collection('default').add(data)       
 
 # function to upload a file to Google Cloud Storage
-def uploadToCloud(file):
-    bucket = storage_client.get_bucket('s3298931-a1-numbers')
+def uploadToCloud(file, type):
+    if type == 'message':
+        bucket_name = 's3298931_post_images'
+    else:
+        bucket_name = 's3298931-a1-numbers'
+    bucket = storage_client.get_bucket(bucket_name)
     blob = bucket.blob(file.filename)
     blob.upload_from_file(file)
+
+    image_name = file.filename
+    image_url = 'https://storage.cloud.google.com/' + bucket_name + '/' + image_name
+
+    return image_url
 
 # function to return a users image
 def getImage(id):
@@ -134,6 +144,31 @@ def getImage(id):
     bucket_name = 's3298931-a1-numbers'
     image_path = 'https://storage.cloud.google.com/' + bucket_name + '/' + image_name
     return image_path
+
+# function to store a post on firestore db and upload image to google cloud storage
+def uploadMessage(subject, text, image, user_id):
+
+    # obtain the image name
+    image_name = image.filename.strip()
+    if not image_name:
+        image_name = None
+    else:
+        image_name = image.filename
+    
+    # obtain the image url for the user
+    user_image_url = getImage(user_id) 
+
+    # update image to google cloud storage
+    if image_name != None:
+        image_url = uploadToCloud(image, 'message')
+    else:
+        image_url = None
+
+    # update message contents to firestore db
+    time = datetime.now()
+    user_name = getUsername(user_id)
+    data = {"subject":subject, "text":text, "image_url":image_url, "date_time":time, "user_name":user_name, "user_image_url":user_image_url}
+    db.collection('messages').document().set(data)
 
 # -------------------------------------------------------------------------------------------
 # FLASK FUNCTIONALITY 
@@ -186,10 +221,28 @@ def login():
         return render_template("login.html", reg_status=new_reg)
 
 # forum page
-@app.route("/forum/")
+@app.route("/forum/", methods=["POST", "GET"])
 def forum():
+    
+    # message posted
+    if request.method == "POST":
+        # capture message data from form
+        subject = request.form["msg-subject"]
+        text = request.form["msg-text"]
+        if "msg-image" in request.files:
+            image = request.files["msg-image"]
+        else:
+            image = None
+
+        # upload message to firestore db
+        uploadMessage(subject, text, image, session["logged-in-user"])
+
     if "logged-in-user" in session:
-        return render_template("forum.html")
+         # get the ten latest posts to pass to forum page
+        docs = db.collection(u'messages')
+        query = docs.order_by(u"date_time", direction=firestore.Query.DESCENDING).limit(10)
+        results = query.get()
+        return render_template("forum.html", message_data=results)
     else:
         return redirect(url_for("login"))
 
@@ -248,7 +301,7 @@ def register():
             render_template("register.html")
         else:
             image = request.files["reg-Image"]
-            uploadToCloud(image)
+            uploadToCloud(image, 'user')
             newUser(regID, regUsername, regPw, image.filename)
             session.pop("regId", None)
             session.pop("regUsername", None)
