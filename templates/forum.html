@@ -4,15 +4,17 @@
 <h1>Forum</h1>
 <!-- user area -->
 <div style="border-style:solid; padding:15px">
-    <p>User area</p>
+    <h4>User area</h4>
     <a href="\user">{{session["user-name"]}}</a>
     <img src="{{session['image']}}" alt="user_image" style="width:120px;height:120px">
     <br/>
     <a href="\logout">Click here to Logout</a>
 </div>
+</br>
 <!-- message posting area -->
 <div style="border-style:solid; padding:15px">
     <form action="#" enctype="multipart/form-data" method = "post">
+        <h4>Post a message</h4>
         <p>Message subject</p>
         <p><input type="text" name="msg-subject" required /></p>
         <p>Message text</p>
@@ -24,9 +26,10 @@
         <p><input type="submit" value="Submit" /></p>
     </form>
 </div>
+</br>
 <!-- message display area -->
 <div style="border-style:solid; padding:15px">
-    <p>10 latest messages</p>
+    <h4>10 latest messages</h4>
     <ul>
         {% for doc in message_data %}
             <li>

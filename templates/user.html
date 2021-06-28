@@ -2,4 +2,27 @@
 {% block title %}User Page{% endblock %}
 {% block content %}
 <h1>User Page</h1>
+<!--password edit area-->
+<div style="border-style:solid; padding:15px">
+    <h4>Password edit area</h4>
+    <form action="#" method='POST'>
+        <!--display error message if old password incorrect-->
+        {% if pw_success == "False" %}
+            <p style="color:red">The old password is incorrect</p>
+        {% endif %}
+        <p>Old password</p>
+        <p><input type="text" name="old-pw" required /></p>
+        <p>New password</p>
+        <p><input type="text" name="new-pw" required /></p>
+        <input type="submit" name = "pw-edit" value="Change" />
+    </form>
+</div>
+<br/>
+<!--post edit area-->
+<div style="border-style:solid; padding:15px">
+    <h4>Post edit area</h4>
+    <form action="#" method = 'POST'>
+        <input type="submit" name="post-edit" value="Update" />
+    </form>
+</div>
 {% endblock %}

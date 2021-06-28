@@ -6,6 +6,9 @@
 {% if reg_status == "True" %}
     <p style="color:forestgreen;">Registration successful, you can now login</p>
 {% endif %}
+{% if reg_status == "pw-change" %}
+    <p style="color:forestgreen;">Password change successful, you can now login with the new details</p>
+{% endif %}
 <p>Please enter your ID and password to login</p>
 <p>If you don't already have an account use the register link to get started</p>
 <form action="#" method="post">

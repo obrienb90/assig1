@@ -95,6 +95,15 @@ def validate(id, pw):
     else:
         return False
 
+# function to change password
+def changePassword(id, new_pw):
+
+    docs = db.collection('default').get()
+    for doc in docs:
+        if doc.to_dict()['id']==id:
+            key = doc.id
+            db.collection('default').document(key).update({"password":new_pw})
+
 # function to determine if id exists
 def idExists(id):
     found = False
@@ -215,6 +224,8 @@ def login():
 
         if "new_reg" in request.args:
             new_reg = request.args["new_reg"]
+        elif "pw_change" in request.args:
+            new_reg = "pw-change"
         else:
             new_reg = False
 
@@ -247,10 +258,33 @@ def forum():
         return redirect(url_for("login"))
 
 # user page
-@app.route("/user/")
+@app.route("/user/", methods=["POST", "GET"])
 def user():
+    
+    # form submission
+    if request.method == 'POST':
+        # password edit 
+        if "pw-edit" in request.form:
+            id = session['logged-in-user']
+            pw = request.form['old-pw']
+            if validate(id, pw):
+                changePassword(id, request.form['new-pw'])
+                # log out user so they are prompted to log in with new password
+                session.pop("logged-in-user", None)
+                return redirect(url_for("login", pw_change=True))
+            else:
+                return redirect(url_for("user", pw_success=False))
+
+
+        # post edit
+        if "post-edit" in request.form:
+            print("post-edit success!")
+    
     if "logged-in-user" in session:
-        return render_template("user.html")
+        if "pw_success" in request.args:
+            return render_template("user.html", pw_success=request.args['pw_success'])
+        else:
+            return render_template("user.html")
     else:
         return redirect(url_for("login"))
 
