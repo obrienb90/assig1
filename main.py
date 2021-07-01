@@ -260,10 +260,10 @@ def home():
     # check for existing records in the firebase database and update if required
     initialWrite()
     
-    return render_template("index.html")
+    return redirect(url_for("login"))
 
 # login page
-@app.route("/login/", methods=["POST", "GET"])
+@app.route("/index/", methods=["POST", "GET"])
 def login():
 
     if request.method == "POST":
@@ -286,7 +286,7 @@ def login():
             session["val-status"] = "fail"
             session.pop("user-id", None)
             session.pop("pw", None)
-            return render_template("login.html")
+            return render_template("index.html")
             
         
     else:
@@ -300,7 +300,7 @@ def login():
         else:
             new_reg = False
 
-        return render_template("login.html", reg_status=new_reg)
+        return render_template("index.html", reg_status=new_reg)
 
 # forum page
 @app.route("/forum/", methods=["POST", "GET"])
