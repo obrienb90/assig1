@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Edit Post{% endblock %}
+{% block content %}
+<h1>Edit Post</h1>
+<a href="/user">back</a>
+<br></br>
+<!-- edit the post -->
+<div style="border-style:solid; padding:15px">
+    <form action="#" enctype="multipart/form-data" method = "post">
+        <p>Message subject</p>
+        <p><input type="text" name="msg-subject" value={{post.to_dict()['subject']}} required /></p>
+        <p>Message text</p>
+        <p><textarea name="msg-text" rows="10" cols="50" >{{post.to_dict()['text']}}</textarea></p>
+        <p>
+            Message Image:
+            {% if post.to_dict()['image_url'] != None %}
+            <img src="{{post.to_dict()['image_url']}}" alt="message_image" style="width:120px;height:120px">
+            {% else %}
+            No image for this post
+            {% endif %}
+        </p>
+        <p> 
+            Edit Image <br></br>
+            <input type="file" name="msg-image" accept="image/*" />
+        </p>
+        <p><input type="submit" value="Submit" /></p>
+    </form>
+</div>
+{% endblock %}

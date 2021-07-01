@@ -2,6 +2,8 @@
 {% block title %}User Page{% endblock %}
 {% block content %}
 <h1>User Page</h1>
+<a href="/forum">Back</a>
+<br></br>
 <!--password edit area-->
 <div style="border-style:solid; padding:15px">
     <h4>Password edit area</h4>
@@ -21,8 +23,23 @@
 <!--post edit area-->
 <div style="border-style:solid; padding:15px">
     <h4>Post edit area</h4>
-    <form action="#" method = 'POST'>
-        <input type="submit" name="post-edit" value="Update" />
-    </form>
+    <ul>
+        {% for doc in message_data %}
+            <li>
+                <p>Subject: {{doc.to_dict()['subject']}}</p> 
+                <p>Message Text: {{doc.to_dict()['text']}}</p> 
+                <p>
+                    Message Image:
+                    {% if doc.to_dict()['image_url'] != None %}
+                    <img src="{{doc.to_dict()['image_url']}}" alt="message_image" style="width:120px;height:120px">
+                    {% else %}
+                    No image for this message
+                    {% endif %} 
+                </p>
+                <p>Posted Time: {{doc.to_dict()['date_time']}}</p>
+                <p><a href="/edit/{{doc.to_dict()['post_id']}}">Edit</a></p>
+            </li>
+        {% endfor %}   
+    </ul>
 </div>
 {% endblock %}

@@ -129,20 +129,33 @@ def newUser(id, username, pw, image_name):
     data = {'id':id, 'user_name':username, 'password':pw, 'image_name':image_name}
     db.collection('default').add(data)       
 
+# function to determine a file name and return None if file is empty
+def fileGetName(file):
+    file_name = file.filename.strip()
+    if not file_name:
+        return None
+    else:
+        return file_name
+
+
 # function to upload a file to Google Cloud Storage
 def uploadToCloud(file, type):
-    if type == 'message':
-        bucket_name = 's3298931_post_images'
+    file_name = fileGetName(file)
+    if file_name is None:
+        return
     else:
-        bucket_name = 's3298931-a1-numbers'
-    bucket = storage_client.get_bucket(bucket_name)
-    blob = bucket.blob(file.filename)
-    blob.upload_from_file(file)
+        if type == 'message':
+            bucket_name = 's3298931_post_images'
+        else:
+            bucket_name = 's3298931-a1-numbers'
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.blob(file.filename)
+        blob.upload_from_file(file)
 
-    image_name = file.filename
-    image_url = 'https://storage.cloud.google.com/' + bucket_name + '/' + image_name
+        image_name = file.filename
+        image_url = 'https://storage.cloud.google.com/' + bucket_name + '/' + image_name
 
-    return image_url
+        return image_url
 
 # function to return a users image
 def getImage(id):
@@ -158,11 +171,7 @@ def getImage(id):
 def uploadMessage(subject, text, image, user_id):
 
     # obtain the image name
-    image_name = image.filename.strip()
-    if not image_name:
-        image_name = None
-    else:
-        image_name = image.filename
+    image_name = fileGetName(image)
     
     # obtain the image url for the user
     user_image_url = getImage(user_id) 
@@ -173,11 +182,72 @@ def uploadMessage(subject, text, image, user_id):
     else:
         image_url = None
 
+    # generate a unique id for the post
+    post_id = 0
+    docs = db.collection('messages').get()
+    found = False
+    while not found:
+        for doc in docs:
+            if doc.to_dict()['post_id'] == post_id:
+                found = True
+                break
+        if found:
+            post_id += 1
+            found = False
+        else:
+            found = True
+    
+
     # update message contents to firestore db
     time = datetime.now()
     user_name = getUsername(user_id)
-    data = {"subject":subject, "text":text, "image_url":image_url, "date_time":time, "user_name":user_name, "user_image_url":user_image_url}
+    data = {"subject":subject, "text":text, "image_url":image_url, "date_time":time, "user_name":user_name, "user_image_url":user_image_url,
+            "post_id":post_id}
     db.collection('messages').document().set(data)
+
+# function to get a message with a given post_id
+def getPost(id):
+    docs = db.collection('messages').get()
+    for doc in docs:
+        if doc.to_dict()['post_id'] == int(id):
+            return doc
+    return None
+
+# function to update an existing post
+def updatePost(id, subject, text, image):
+    
+    # get the post to update
+    docs = db.collection('messages').get()
+    key = None
+    for doc in docs:
+        if doc.to_dict()['post_id'] == int(id):
+            key = doc.id
+            break
+
+    # obtain the image name
+    image_name = fileGetName(image)
+    
+    if image_name != None:
+
+        # update image to google cloud storage
+        image_url = uploadToCloud(image, 'message')
+
+    else:
+
+        image_url = None
+
+    # update message to firestore db
+    time = datetime.now()
+    
+    # if image provided, update imate
+    if image_url != None:
+        data = {"subject":subject, "text":text, "image_url":image_url, "date_time":time}
+    # if no image provided, do not update image
+    else:
+        data = {"subject":subject, "text":text, "date_time":time}
+
+    db.collection('messages').document(key).update(data)
+    
 
 # -------------------------------------------------------------------------------------------
 # FLASK FUNCTIONALITY 
@@ -209,6 +279,7 @@ def login():
             session["image"] = getImage(userId)
             session.pop("user-id", None)
             session.pop("pw", None)
+            session.pop("val-status", None)
             return redirect(url_for("forum"))
         # if username or password is invalid set the sesssion variable validated to fail
         else:
@@ -261,11 +332,13 @@ def forum():
 @app.route("/user/", methods=["POST", "GET"])
 def user():
     
+    # get the logged in user id
+    id = session['logged-in-user']
+
     # form submission
     if request.method == 'POST':
         # password edit 
         if "pw-edit" in request.form:
-            id = session['logged-in-user']
             pw = request.form['old-pw']
             if validate(id, pw):
                 changePassword(id, request.form['new-pw'])
@@ -281,10 +354,19 @@ def user():
             print("post-edit success!")
     
     if "logged-in-user" in session:
+        
+        # get all posts from the logged in user to pass to post edit area
+        # get user name from id
+        user_name = getUsername(id)
+        docs = db.collection(u'messages')
+        first_query = docs.where(u"user_name", u"==", user_name)
+        query = first_query.order_by(u"date_time", direction=firestore.Query.DESCENDING)
+        results = query.get()
+
         if "pw_success" in request.args:
-            return render_template("user.html", pw_success=request.args['pw_success'])
+            return render_template("user.html", pw_success=request.args['pw_success'], message_data=results)
         else:
-            return render_template("user.html")
+            return render_template("user.html", message_data=results)
     else:
         return redirect(url_for("login"))
 
@@ -295,7 +377,6 @@ def register():
     # pop any session values which may be present from previous attepmts
     session.pop("reg-id-status", None)
     session.pop("reg-username-status", None)
-    session.pop("reg-password-status", None)
     
     # logic upon form completion
     # update variables from form
@@ -305,25 +386,14 @@ def register():
         regPw = request.form["reg-pw"]
 
 
-        # check if id or username is blank or already exists in firestore db
+        # check if id or username is already exists in firestore db
         failure = False
 
-        if len(regID) == 0:
-            session["reg-id-status"] = "blank"
-            failure = True
-        elif idExists(regID):
+        if idExists(regID):
             session["reg-id-status"] = "found"
             failure = True
-        if len(regUsername) == 0:
-            session["reg-username-status"] = "blank"
-            failure = True
-        elif usernameExists(regUsername):
+        if usernameExists(regUsername):
             session["reg-username-status"] = "found"
-            failure = True
-
-        # check that password is not blank
-        if len(regPw) == 0:
-            session["reg-password-status"] = "blank"
             failure = True
         
         # check if form validation successful
@@ -335,14 +405,34 @@ def register():
             render_template("register.html")
         else:
             image = request.files["reg-Image"]
+            
             uploadToCloud(image, 'user')
             newUser(regID, regUsername, regPw, image.filename)
             session.pop("regId", None)
             session.pop("regUsername", None)
-            session.pop("regPw", None)
             return redirect(url_for("login", new_reg=True))
 
     return render_template("register.html")
+
+# edit post page
+@app.route("/edit/<post_id>", methods=["POST", "GET"])
+def edit(post_id):
+    
+    post = getPost(post_id)
+
+    # if change has been submitted
+    if request.method == "POST":
+        msg_subject = request.form["msg-subject"]
+        msg_text = request.form["msg-text"]
+        msg_new_image = request.files["msg-image"]
+
+        updatePost(post_id, msg_subject, msg_text, msg_new_image)
+
+        return redirect(url_for("forum"))
+
+    else:
+
+        return render_template("edit.html", post=post)
 
 # logout page
 @app.route("/logout/")
